@@ -1,0 +1,35 @@
+# 模型权重
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Checkpoint 目录（含 optimizer state）
+output/checkpoint-*/
+
+# 训练后的模型权重目录
+output/grpo_addition_model/
+
+# Tokenizer 大文件（可从 HuggingFace 重新下载）
+output/*/tokenizer.json
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 上游透明 GRPO 项目（已有自己的 git 仓库）
+transparent-grpo/
