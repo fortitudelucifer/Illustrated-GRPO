@@ -1,0 +1,39 @@
+# ============================================================
+# 依赖说明
+# ============================================================
+#
+# 阶段 1-3（本机 5070Ti，Conda 环境）：
+#   Python 3.13 + Jupyter Notebook
+#   需要的包：numpy, matplotlib, torch, transformers, trl, datasets, accelerate, tensorboard
+#
+# 阶段 4（4090 服务器，Docker 环境）：
+#   基础镜像：nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+#   Python 3.10 + PyTorch (CUDA 12.4)
+#   具体见 Dockerfile
+#
+# 以下为两个环境共用的核心依赖（版本号为 4090 Docker 中实际安装的版本）
+# ============================================================
+
+# PyTorch（阶段 4 通过 --index-url https://download.pytorch.org/whl/cu124 安装）
+torch>=2.6.0
+
+# HuggingFace 生态
+transformers>=5.0.0
+trl==1.9.2
+datasets>=3.0.0
+accelerate>=1.0.0
+
+# 可视化与日志
+tensorboard>=2.15.0
+matplotlib>=3.8.0
+
+# 数据处理
+numpy>=1.26.0
+pandas>=2.1.0
+
+# 模型下载（4090 上使用）
+modelscope>=1.39.0
+
+# 注意：vLLM 因与 TRL 1.9.2 不兼容已移除
+# 如果未来 TRL 版本兼容 vLLM，可添加：
+# vllm>=0.17.0,<0.26.0
