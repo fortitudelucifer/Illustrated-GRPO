@@ -1,66 +1,55 @@
----
-library_name: transformers
-model_name: output
-tags:
-- generated_from_trainer
-- grpo
-- trl
-licence: license
----
+# output/ 目录说明
 
-# Model Card for output
+本目录保存 GRPO 训练过程中产生的记录文件，**不含模型权重**（已被 .gitignore 排除）。
 
-This model is a fine-tuned version of [None](https://huggingface.co/None).
-It has been trained using [TRL](https://github.com/huggingface/trl).
+## 目录结构
 
-## Quick start
-
-```python
-from transformers import pipeline
-
-question = "If you had a time machine, but could only go to the past or the future once and never return, which would you choose and why?"
-generator = pipeline("text-generation", model="None", device="cuda")
-output = generator([{"role": "user", "content": question}], max_new_tokens=128, return_full_text=False)[0]
-print(output["generated_text"])
+```
+output/
+├── README.md                      # 本文件
+├── stage4_eval_results.md         # 阶段 4 评估结果汇总（90%→100%）
+├── stage4_trainer_state.json      # 阶段 4 完整 500 步训练历史（每步所有指标）
+├── stage4_runs/                   # 阶段 4 TensorBoard 日志（4090 训练）
+│   ├── Aug03_06-25-49_*/          #    tfevents 文件（7.5KB，初始日志）
+│   └── Aug03_06-26-13_*/          #    tfevents 文件（840KB，主训练日志）
+├── runs/                          # 阶段 2 TensorBoard 日志（5070Ti 训练）
+│   ├── Aug02_21-26-14_*/          #    第一轮训练（G=4，两位数加法）
+│   ├── Aug02_23-25-32_*/          #    第二轮训练（G=6，三位数加法）
+│   ├── Aug02_23-35-16_*/
+│   └── Aug03_00-13-34_*/
+└── completions/                   # 阶段 2 训练中模型生成的回答记录
+    └── completions_00001~00300.parquet  # 300 步，每步保存模型生成的回答
 ```
 
-## Training procedure
+## 如何查看 TensorBoard 日志
 
- 
+```bash
+# 安装 tensorboard
+pip install tensorboard
 
+# 启动
+tensorboard --logdir output/
 
+# 浏览器打开 http://localhost:6006
+```
 
-This model was trained with GRPO, a method introduced in [DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models](https://huggingface.co/papers/2402.03300).
+## 如何查看训练历史
 
-### Framework versions
+```python
+import json
+
+with open("output/stage4_trainer_state.json") as f:
+    state = json.load(f)
+
+# 查看每步的指标
+for entry in state["log_history"][:5]:
+    print(f"Step {entry['step']}: reward={entry['reward']:.2f}, kl={entry['kl']:.4f}")
+```
+
+## 框架版本（阶段 4 Docker 环境）
 
 - TRL: 1.9.2
 - Transformers: 5.14.1
-- Pytorch: 2.11.0+cu128
+- PyTorch: 2.11.0+cu128
 - Datasets: 5.0.1
 - Tokenizers: 0.22.2
-
-## Citations
-
-Cite GRPO as:
-
-```bibtex
-@article{shao2024deepseekmath,
-    title        = {{DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models}},
-    author       = {Zhihong Shao and Peiyi Wang and Qihao Zhu and Runxin Xu and Junxiao Song and Mingchuan Zhang and Y. K. Li and Y. Wu and Daya Guo},
-    year         = 2024,
-    eprint       = {arXiv:2402.03300},
-}
-```
-
-Cite TRL as:
-    
-```bibtex
-@software{vonwerra2020trl,
-  title   = {{TRL: Transformers Reinforcement Learning}},
-  author  = {von Werra, Leandro and Belkada, Younes and Tunstall, Lewis and Beeching, Edward and Thrush, Tristan and Lambert, Nathan and Huang, Shengyi and Rasul, Kashif and Gallouédec, Quentin},
-  license = {Apache-2.0},
-  url     = {https://github.com/huggingface/trl},
-  year    = {2020}
-}
-```

@@ -69,13 +69,11 @@
 
 ## 二、模型文件
 
-已下载到 `/data/models`：
-
-| 模型 | 路径 | 大小 | 用途 |
-|------|------|------|------|
-| Qwen2.5-0.5B-Instruct | `/data/models/Qwen2.5-0.5B-Instruct` | 954MB | 阶段2：本机教学训练 |
-| Qwen2.5-1.5B-Instruct | `/data/models/Qwen2.5-1.5B-Instruct` | 2.9GB | 阶段4：4090 进阶训练 |
-| Qwen2.5-3B-Instruct | `/data/models/Qwen2.5-3B-Instruct` | 5.8GB | 阶段5：4090 更大模型实验 |
+| 模型 | 本机路径 | 4090 路径 | 大小 | 用途 |
+|------|---------|---------|------|------|
+| Qwen2.5-0.5B-Instruct | `/data/models/Qwen2.5-0.5B-Instruct` | — | 954MB | 阶段2：本机教学训练 |
+| Qwen2.5-1.5B-Instruct | `/data/models/Qwen2.5-1.5B-Instruct` | `/mnt/nvme_gm9_1tb/models/Qwen2.5-1.5B-Instruct` | 2.9GB | 阶段4：4090 进阶训练 |
+| Qwen2.5-3B-Instruct | `/data/models/Qwen2.5-3B-Instruct` | — | 5.8GB | 阶段5：4090 更大模型实验 |
 
 ## 三、环境管理策略
 
@@ -537,13 +535,47 @@ tensorboard --logdir output/runs --port 6006
 - [x] 阶段 1：玩具算法理解（`stage1_toy_grpo.ipynb`）
 - [x] 阶段 2：最小 LLM GRPO 训练（`stage2_trl_grpo.ipynb`）
 - [x] 阶段 3：阅读源码（`stage3_source_code.ipynb`）
-- [x] 阶段 4：4090 正式训练（`stage4_notebook.ipynb` + `stage4_train.py` + `Dockerfile`）
+- [x] 阶段 4：4090 正式训练（`stage4_notebook.ipynb` + `stage4_train.py` + `stage4_eval.py` + `stage4_deploy.sh` + `Dockerfile`）
+- [x] 阶段 4：训练记录与评估结果（`output/stage4_runs/` + `output/stage4_trainer_state.json` + `output/stage4_eval_results.md`）
+- [x] 全过程训练总结（`stage4_summary.md`）
 - [ ] 阶段 5：自定义奖励函数实验
 - [ ] 阶段 6：评估与可视化
 
 ---
 
-## 十、学习建议
+## 十、仓库结构
+
+```
+illustrated-grpo/
+├── README.md                      # 项目主文档：GRPO 原理 + 硬件 + 进度
+├── stage4_summary.md              # 全过程训练总结（每次训练的参数/结果/改动原因）
+├── 4090_agent_上手指南.md          # 4090 服务器环境说明
+├── requirements.txt               # 依赖说明
+├── Dockerfile                     # 阶段 4 Docker 镜像定义
+├── .gitignore                     # 排除模型权重/checkpoint
+│
+├── stage1_toy_grpo.ipynb          # 阶段 1：numpy 手写 GRPO
+├── stage1_training_visualization.png  # 阶段 1 训练可视化图
+├── stage2_trl_grpo.ipynb          # 阶段 2：TRL + 0.5B 训练
+├── stage3_source_code.ipynb       # 阶段 3：TRL 源码解读
+├── stage3_experiments.py          # 阶段 3：K1/K3、epochs、clip 对比实验
+├── stage4_notebook.ipynb          # 阶段 4：教学 notebook
+├── stage4_train.py                # 阶段 4：1.5B 训练脚本
+├── stage4_eval.py                 # 阶段 4：评估脚本
+├── stage4_deploy.sh               # 阶段 4：Docker 部署脚本
+│
+└── output/                        # 训练记录（不含模型权重）
+    ├── README.md                  # 训练输出说明
+    ├── stage4_eval_results.md     # 阶段 4 评估结果汇总
+    ├── stage4_trainer_state.json  # 阶段 4 完整 500 步训练历史
+    ├── stage4_runs/               # 阶段 4 TensorBoard 日志
+    ├── runs/                      # 阶段 2 TensorBoard 日志
+    └── completions/               # 阶段 2 训练中模型生成的回答记录
+```
+
+---
+
+## 十一、学习建议
 
 1. **不要跳阶段**：每个阶段建立在前一个的理解上，跳过会导致后面看不懂
 2. **先直觉后公式**：每个概念先用生活类比理解，再看数学公式，最后看代码
@@ -551,3 +583,4 @@ tensorboard --logdir output/runs --port 6006
 4. **遇到不懂的术语**：回到第 0.3 节术语表查
 5. **遇到不懂的公式**：回到第 4 节看对应的生活类比和数学知识映射
 6. **每个阶段的"理解检查点"都要过**：确认自己能回答那些问题再进入下一阶段
+7. **想了解完整训练历程**：看 `stage4_summary.md`，记录了每次训练的参数、结果、改动原因和效果改进
