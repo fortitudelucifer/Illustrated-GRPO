@@ -1,6 +1,9 @@
 """
-阶段 4：正式训练脚本
-在 4090 (48GB) 上用 Qwen2.5-1.5B + vLLM 加速 + G=8 训练三位数加法
+阶段 4b：正式训练脚本
+在 4090 (48GB) 上用 Qwen2.5-1.5B + G=8 训练五位数加法
+
+实验背景：三位数加法基座准确率 95%，GRPO 无学习信号且导致 -3.2% 退化。
+改用五位数加法，预估基座准确率 50-70%，落入 GRPO 甜区。
 
 使用方法：
   python stage4_train.py
@@ -19,22 +22,22 @@ from trl import GRPOConfig, GRPOTrainer
 # ============================================================
 # 配置
 # ============================================================
-MODEL_PATH = "/mnt/nvme_gm9_1tb/models/Qwen2.5-1.5B-Instruct"
-OUTPUT_DIR = "/mnt/hdd_wd_4tb/grpo_output/grpo_1.5b_addition"
-LOG_DIR = "/mnt/hdd_wd_4tb/grpo_output/logs/stage4"
+MODEL_PATH = "/models/Qwen2.5-1.5B-Instruct"
+OUTPUT_DIR = "/output/grpo_1.5b_5digit_addition"
+LOG_DIR = "/output/logs/stage4b"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # ============================================================
-# 数据集：三位数加法（和阶段 2 相同任务，但数据量更大）
+# 数据集：五位数加法（a, b ∈ [10000, 99999]，结果为 5-6 位数）
 # ============================================================
 def make_addition_dataset(n=1000, seed=42):
     random.seed(seed)
     data = []
     for _ in range(n):
-        a = random.randint(100, 999)
-        b = random.randint(100, 999)
+        a = random.randint(10000, 99999)
+        b = random.randint(10000, 99999)
         data.append({"prompt": f"What is {a}+{b}? Answer with just the number.",
                       "answer": str(a + b)})
     return data
@@ -77,7 +80,7 @@ def format_reward(completions, **kwargs):
     for completion in completions:
         text = extract_text(completion)
         stripped = text.strip()
-        if re.match(r'^\d{3,4}$', stripped):
+        if re.match(r'^\d{5,6}$', stripped):
             rewards.append(0.2)
         elif re.match(r'^\d+$', stripped):
             rewards.append(0.1)
@@ -101,7 +104,7 @@ config = GRPOConfig(
 
     # 生成
     num_generations=8,              # G=8（4090 显存够）
-    max_completion_length=32,       # 加法回答短，32 够用
+    max_completion_length=48,       # 5位数加法结果最多6位，留余量
     generation_kwargs={
         "temperature": 0.8,
         "do_sample": True,
@@ -114,12 +117,12 @@ config = GRPOConfig(
     learning_rate=5e-6,
     num_train_epochs=1,
     max_steps=500,                  # 500 步
-    warmup_steps=30,
+    warmup_steps=50,                # 更长预热，防止早期崩溃
     per_device_train_batch_size=4,
     gradient_accumulation_steps=2,  # 4×2=8，能被 G=8 整除
 
-    # 稳定性
-    beta=0.1,                       # KL 惩罚
+    # 稳定性（比 3-digit 实验更保守）
+    beta=0.2,                       # 更强的 KL 约束
     max_grad_norm=0.5,              # 梯度裁剪
     epsilon=0.2,                    # PPO 裁剪（TRL 1.9.x 用 epsilon）
 
@@ -135,7 +138,8 @@ def main():
     print("=" * 60)
     print("阶段 4：正式训练")
     print(f"  模型: {MODEL_PATH}")
-    print(f"  G={config.num_generations}, temp={config.temperature}")
+    print(f"  Task: 5-digit addition")
+    print(f"  G={config.num_generations}, temp=0.8")
     print(f"  lr={config.learning_rate}, beta={config.beta}")
     print(f"  max_steps={config.max_steps}")
     print(f"  vLLM: {config.use_vllm}")
