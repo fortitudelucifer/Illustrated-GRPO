@@ -1,57 +1,83 @@
-# 阶段 4 评估结果
+# Stage 4 Evaluation Results
 
-> 2026-08-03 | 4090 服务器 | Qwen2.5-1.5B-Instruct + GRPO
+> 2026-08-06 | 4090 server | Qwen2.5-1.5B-Instruct + GRPO
+> **Revised evaluation: 500 questions × 5 seeds (replaces earlier n=20, single-seed evaluation)**
 
-## 评估方法
+## Why the Previous Evaluation Was Invalid
 
-- 测试集：20 道三位数加法（seed=999，与训练集不重叠）
-- 解码方式：greedy decoding（temperature=0，确定性输出）
-- 评估脚本：`stage4_eval.py`
+The initial evaluation used only 20 questions with a single seed (seed=999), reporting "90% → 100%". This had two critical issues:
 
-## 结果
+1. **Sample size too small**: With n=20, the 95% Wilson CI for 90% is [70.1%, 97.2%] and for 100% is [83.2%, 100%] — heavily overlapping, no statistical significance
+2. **Single seed**: Only one test set was tried, providing no variance estimate
 
-| 指标 | 训练前 | 训练后 | 变化 |
-|------|--------|--------|------|
-| 准确率 | 90.0% | 100.0% | **+10.0%** |
+The revised evaluation uses 500 questions × 5 seeds = 2,500 total samples per model.
 
-## 训练统计
+## Evaluation Method
 
-| 指标 | 值 |
-|------|-----|
-| 总步数 | 500 |
-| 总耗时 | 5 分 45 秒 |
-| 每步耗时 | ~0.25 秒 |
-| 训练速度 | 2.28 it/s |
-| 最终 train_loss | 0.0925 |
-| 最终 reward | 1.2（满分 = correctness 1.0 + format 0.2） |
-| 最终 KL | ~0（完全收敛） |
-| 最终 entropy | ~0.002（非常确定） |
+- **Test set**: 500 three-digit addition problems per seed (a,b ∈ [100,999])
+- **Seeds**: [42, 123, 456, 789, 999] — 5 independent test sets
+- **Decoding**: Greedy (temperature=0, deterministic)
+- **Batch size**: 64
+- **Max new tokens**: 16
+- **Script**: `stage4_eval.py`
 
-## 训练过程关键指标
+## Results
 
-| 阶段 | Step | Reward | KL | Entropy | frac_reward_zero_std |
-|------|------|--------|-----|---------|---------------------|
-| 初期 | 1 | 1.2 | 0 | 0.034 | 1.0 |
-| 中期 | 164 | 0.7-1.2 | 1.67 | 0.77 | 0-1 |
-| 中后期 | 295 | 0.95 | 0.20 | 0.03 | 0 |
-| 后期 | 395 | 1.2 | 0.01 | 0.001 | 1.0 |
-| 末期 | 500 | 1.2 | 0 | 0.002 | 1.0 |
+| Model | Accuracy (mean±std) | 95% CI (Wilson) | Correct/Total |
+|-------|---------------------|-----------------|---------------|
+| Base model | 94.92% ± 1.06% | [93.99%, 95.71%] | 2373/2500 |
+| Trained model | 91.72% ± 1.59% | [90.57%, 92.74%] | 2293/2500 |
+| **Change** | **-3.20%** | CIs do not overlap | -80/2500 |
 
-> 注：后期 `frac_reward_zero_std=1` 是因为模型全答对了（reward=1.2 满分），不是没有学习信号。
+**Conclusion**: The trained model is **statificantly worse** than the base model on this task. The 95% confidence intervals do not overlap, confirming this is not due to random variation.
 
-## 与阶段 2 对比
+## Per-Seed Detail
 
-| | 阶段 2 (0.5B, G=6, 5070Ti) | 阶段 4 (1.5B, G=8, 4090) |
-|--|---------------------------|--------------------------|
-| 基座准确率 | ~50% | 90% |
-| 训练后准确率 | ~80% | **100%** |
-| 训练时间 | ~30 分钟 | **5 分 45 秒** |
-| KL 控制 | 有时飙升 | 非常稳定（最终 ~0） |
-| 奖励函数 | 仅正确性 | 正确性 + 格式 |
+| Seed | Base | Trained | Diff |
+|------|------|---------|------|
+| 42 | 95.80% (479/500) | 91.40% (457/500) | -4.40% |
+| 123 | 93.20% (466/500) | 93.40% (467/500) | +0.20% |
+| 456 | 95.80% (479/500) | 91.00% (455/500) | -4.80% |
+| 789 | 95.00% (475/500) | 89.60% (448/500) | -5.40% |
+| 999 | 94.80% (474/500) | 93.20% (466/500) | -1.60% |
 
-## 文件说明
+4 out of 5 seeds show regression; 1 seed shows essentially no change.
 
-| 文件 | 说明 |
-|------|------|
-| `output/stage4_runs/` | TensorBoard 日志（2 个 tfevents 文件，~868KB） |
-| `output/stage4_trainer_state.json` | 完整 500 步训练历史（每步的所有指标，524KB） |
+## Analysis: Why Did the Model Regress?
+
+### 1. Base model was already very strong (94.92%)
+
+The 1.5B model already solves 3-digit addition at ~95% accuracy. This leaves almost no room for improvement — the task is too easy for this model size. This is the same lesson from Stage 2: when base accuracy is >90%, GRPO has almost no learning signal because `frac_reward_zero_std` ≈ 1.0 (all answers in a group are correct).
+
+### 2. Training may have caused catastrophic forgetting
+
+The GRPO training with 500 steps may have slightly degraded the model's general arithmetic ability while optimizing for the specific reward function. The KL penalty (beta=0.1) may not have been sufficient to prevent this.
+
+### 3. The n=20 "90%→100%" result was pure noise
+
+Seed 999 happened to be the seed with the smallest regression (-1.6%). With only 20 questions, the sampling variance was large enough to flip a -1.6% regression into an apparent +10% improvement. This demonstrates why small-sample evaluations are misleading.
+
+## Comparison with Stage 2 (0.5B model)
+
+| | Stage 2 (0.5B) | Stage 4 (1.5B) |
+|--|----------------|----------------|
+| Base accuracy | ~50% | ~95% |
+| After training | ~80% | ~92% |
+| Change | +30% | **-3%** |
+| Task difficulty | Appropriate (30-70% range) | Too easy (>90% range) |
+| Learning signal | Good (zero_std < 70%) | Almost none (zero_std ≈ 100%) |
+
+## Lessons Learned
+
+1. **Always evaluate with sufficient sample size** (n≥200) and multiple seeds
+2. **Task difficulty must match model level** — GRPO needs base accuracy in 30%-70% range
+3. **A 1.5B model already does 3-digit addition at 95%** — need harder tasks (4-digit, multiplication, word problems) to see GRPO improvement
+4. **Small-sample evaluations can flip regression into apparent improvement** — this is why statistical rigor matters
+
+## File Reference
+
+| File | Description |
+|------|-------------|
+| `output/eval_results_500.json` | Complete evaluation results (config, per-seed, summary) |
+| `output/stage4_runs/` | TensorBoard logs from training |
+| `output/stage4_trainer_state.json` | Full 500-step training history |

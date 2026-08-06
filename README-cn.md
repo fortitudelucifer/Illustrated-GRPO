@@ -538,7 +538,7 @@ tensorboard --logdir output/runs --port 6006
 - [x] 阶段 2：最小 LLM GRPO 训练（`stage2_trl_grpo.ipynb`）
 - [x] 阶段 3：阅读源码（`stage3_source_code.ipynb`）
 - [x] 阶段 4：4090 正式训练（`stage4_notebook.ipynb` + `stage4_train.py` + `stage4_eval.py` + `stage4_deploy.sh` + `Dockerfile`）
-- [x] 阶段 4：训练记录与评估结果（`output/stage4_runs/` + `output/stage4_trainer_state.json` + `output/stage4_eval_results.md`）
+- [x] 阶段 4：训练记录与评估结果（500题×5个seed，详见 `output/stage4_eval_results.md`）
 - [x] 全过程训练总结（`stage4_summary.md`）
 - [ ] 阶段 5：自定义奖励函数实验
 - [ ] 阶段 6：评估与可视化

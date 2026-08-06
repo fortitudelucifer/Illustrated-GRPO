@@ -538,7 +538,7 @@ Key metrics:
 - [x] Stage 2: Minimal LLM GRPO training (`stage2_trl_grpo.ipynb`)
 - [x] Stage 3: Source code reading (`stage3_source_code.ipynb`)
 - [x] Stage 4: 4090 formal training (`stage4_notebook.ipynb` + `stage4_train.py` + `stage4_eval.py` + `stage4_deploy.sh` + `Dockerfile`)
-- [x] Stage 4: Training records & evaluation results (`output/stage4_runs/` + `output/stage4_trainer_state.json` + `output/stage4_eval_results.md`)
+- [x] Stage 4: Training records & evaluation results (500 questions × 5 seeds, see `output/stage4_eval_results.md`)
 - [x] Complete training summary (`stage4_summary.md`)
 - [ ] Stage 5: Custom reward function experiments
 - [ ] Stage 6: Evaluation & visualization
