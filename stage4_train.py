@@ -1,14 +1,13 @@
 """
-阶段 4d：正式训练脚本
-在 4090 (48GB) 上用 Qwen2.5-1.5B + LoRA + G=8 训练六位数加法
+阶段 4e：正式训练脚本
+在 4090 (48GB) 上用 Qwen2.5-1.5B + LoRA + G=8 训练两位数乘法
 
 实验背景：
-- 三位数加法基座 95%，全参数微调退化 -3.2%（显著）
-- 五位数加法基座 83%，全参数微调退化 -1.28%（不显著）
-- 六位数加法基座 81%，全参数微调退化 -2.04%（不显著）
-- 三次实验均出现 collapse-recovery 模式：step 51-100 reward 暴跌，恢复后比原来差
-- 根因：全参数微调导致灾难性遗忘 + lr 过高
-- 本次改用 LoRA 适配器（冻结原始权重）+ 更保守的参数
+- 加法任务基座准确率始终 >80%，GRPO 学习信号不足
+- 6-digit 加法 + LoRA 首次获得 +2.00% 提升（无崩溃）
+- 3-digit×3-digit 乘法基座仅 4.9%（太低，全错无信号）
+- 2-digit×2-digit 乘法基座 63.8%（GRPO 甜区！）
+- 本次用 LoRA + 2-digit 乘法，预期获得显著提升
 
 使用方法：
   python stage4_train.py
@@ -29,23 +28,23 @@ from peft import LoraConfig
 # 配置
 # ============================================================
 MODEL_PATH = "/models/Qwen2.5-1.5B-Instruct"
-OUTPUT_DIR = "/output/grpo_1.5b_6digit_lora"
-LOG_DIR = "/output/logs/stage4d"
+OUTPUT_DIR = "/output/grpo_1.5b_2digit_mul_lora"
+LOG_DIR = "/output/logs/stage4e"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # ============================================================
-# 数据集：六位数加法（a, b ∈ [100000, 999999]，结果为 6-7 位数）
+# 数据集：两位数乘法（a, b ∈ [10, 99]，结果为 3-4 位数）
 # ============================================================
-def make_addition_dataset(n=1000, seed=42):
+def make_multiplication_dataset(n=1000, seed=42):
     random.seed(seed)
     data = []
     for _ in range(n):
-        a = random.randint(100000, 999999)
-        b = random.randint(100000, 999999)
-        data.append({"prompt": f"What is {a}+{b}? Answer with just the number.",
-                      "answer": str(a + b)})
+        a = random.randint(10, 99)
+        b = random.randint(10, 99)
+        data.append({"prompt": f"What is {a}*{b}? Answer with just the number.",
+                      "answer": str(a * b)})
     return data
 
 def format_prompt(example):
@@ -86,7 +85,7 @@ def format_reward(completions, **kwargs):
     for completion in completions:
         text = extract_text(completion)
         stripped = text.strip()
-        if re.match(r'^\d{6,7}$', stripped):
+        if re.match(r'^\d{3,4}$', stripped):
             rewards.append(0.2)
         elif re.match(r'^\d+$', stripped):
             rewards.append(0.1)
@@ -110,7 +109,7 @@ config = GRPOConfig(
 
     # 生成
     num_generations=8,              # G=8（4090 显存够）
-    max_completion_length=64,       # 6位数加法结果最多7位，留余量
+    max_completion_length=32,       # 2位数乘法结果最多4位，留余量
     generation_kwargs={
         "temperature": 0.9,         # 略高温以增加组内多样性
         "do_sample": True,
@@ -153,9 +152,9 @@ peft_config = LoraConfig(
 # ============================================================
 def main():
     print("=" * 60)
-    print("阶段 4d：LoRA + 6-digit addition")
+    print("阶段 4e：LoRA + 2-digit multiplication")
     print(f"  模型: {MODEL_PATH}")
-    print(f"  Task: 6-digit addition")
+    print(f"  Task: 2-digit multiplication (10-99)")
     print(f"  LoRA: r=32, alpha=64, dropout=0.05")
     print(f"  G={config.num_generations}, temp=0.9")
     print(f"  lr={config.learning_rate}, beta={config.beta}")
@@ -164,7 +163,7 @@ def main():
     print("=" * 60)
 
     # 准备数据
-    raw_data = make_addition_dataset(1000)
+    raw_data = make_multiplication_dataset(1000)
     dataset = Dataset.from_list(raw_data).map(format_prompt)
     print(f"数据集大小: {len(dataset)}")
 

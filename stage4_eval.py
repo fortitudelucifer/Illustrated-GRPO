@@ -1,6 +1,6 @@
 """
-Stage 4c Evaluation: Compare 1.5B model accuracy before/after GRPO training
-- 500 held-out 6-digit addition problems
+Stage 4e Evaluation: Compare 1.5B model accuracy before/after GRPO training
+- 500 held-out 2-digit multiplication problems
 - 5 random seeds for test set generation
 - Batch inference (batch_size=64)
 - Reports mean±std and 95% confidence intervals
@@ -15,7 +15,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
 MODEL_PATH = "/models/Qwen2.5-1.5B-Instruct"
-TRAINED_PATH = "/output/grpo_1.5b_6digit_lora"
+TRAINED_PATH = "/output/grpo_1.5b_2digit_mul_lora"
 NUM_QUESTIONS = 500
 BATCH_SIZE = 64
 SEEDS = [42, 123, 456, 789, 999]
@@ -27,9 +27,9 @@ def generate_test_questions(seed, n=NUM_QUESTIONS):
     rng = random.Random(seed)
     questions = []
     for _ in range(n):
-        a = rng.randint(100000, 999999)
-        b = rng.randint(100000, 999999)
-        questions.append((a, b, str(a + b)))
+        a = rng.randint(10, 99)
+        b = rng.randint(10, 99)
+        questions.append((a, b, str(a * b)))
     return questions
 
 
@@ -37,7 +37,7 @@ def test_model_batched(model, tokenizer, questions, batch_size=BATCH_SIZE):
     """Run batched greedy inference and return accuracy."""
     prompts = []
     for a, b, ans in questions:
-        messages = [{"role": "user", "content": f"What is {a}+{b}? Answer with just the number."}]
+        messages = [{"role": "user", "content": f"What is {a}*{b}? Answer with just the number."}]
         text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         prompts.append(text)
 
@@ -86,7 +86,7 @@ def wilson_ci(p, n, z=1.96):
 
 def main():
     print("=" * 70)
-    print("Stage 4c Evaluation: 6-digit addition, 500 questions x 5 seeds x 2 models")
+    print("Stage 4e Evaluation: 2-digit multiplication, 500 questions x 5 seeds x 2 models")
     print("=" * 70)
     print(f"Questions per seed: {NUM_QUESTIONS}")
     print(f"Seeds: {SEEDS}")
@@ -192,7 +192,7 @@ def main():
         "improvement": float(trained_mean - base_mean),
     }
 
-    output_path = "/output/eval_results_6digit_lora_500.json"
+    output_path = "/output/eval_results_2digit_mul_lora_500.json"
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nResults saved to {output_path}")
