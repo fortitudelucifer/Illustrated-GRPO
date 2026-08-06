@@ -1,6 +1,6 @@
 """
-Stage 4b Evaluation: Compare 1.5B model accuracy before/after GRPO training
-- 500 held-out 5-digit addition problems
+Stage 4c Evaluation: Compare 1.5B model accuracy before/after GRPO training
+- 500 held-out 6-digit addition problems
 - 5 random seeds for test set generation
 - Batch inference (batch_size=64)
 - Reports mean±std and 95% confidence intervals
@@ -14,7 +14,7 @@ import numpy as np
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 MODEL_PATH = "/models/Qwen2.5-1.5B-Instruct"
-TRAINED_PATH = "/output/grpo_1.5b_5digit_addition"
+TRAINED_PATH = "/output/grpo_1.5b_6digit_addition"
 NUM_QUESTIONS = 500
 BATCH_SIZE = 64
 SEEDS = [42, 123, 456, 789, 999]
@@ -26,8 +26,8 @@ def generate_test_questions(seed, n=NUM_QUESTIONS):
     rng = random.Random(seed)
     questions = []
     for _ in range(n):
-        a = rng.randint(10000, 99999)
-        b = rng.randint(10000, 99999)
+        a = rng.randint(100000, 999999)
+        b = rng.randint(100000, 999999)
         questions.append((a, b, str(a + b)))
     return questions
 
@@ -85,7 +85,7 @@ def wilson_ci(p, n, z=1.96):
 
 def main():
     print("=" * 70)
-    print("Stage 4b Evaluation: 5-digit addition, 500 questions x 5 seeds x 2 models")
+    print("Stage 4c Evaluation: 6-digit addition, 500 questions x 5 seeds x 2 models")
     print("=" * 70)
     print(f"Questions per seed: {NUM_QUESTIONS}")
     print(f"Seeds: {SEEDS}")
@@ -187,7 +187,7 @@ def main():
         "improvement": float(trained_mean - base_mean),
     }
 
-    output_path = "/output/eval_results_5digit_500.json"
+    output_path = "/output/eval_results_6digit_500.json"
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nResults saved to {output_path}")

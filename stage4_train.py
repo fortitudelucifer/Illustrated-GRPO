@@ -1,9 +1,11 @@
 """
-阶段 4b：正式训练脚本
-在 4090 (48GB) 上用 Qwen2.5-1.5B + G=8 训练五位数加法
+阶段 4c：正式训练脚本
+在 4090 (48GB) 上用 Qwen2.5-1.5B + G=8 训练六位数加法
 
-实验背景：三位数加法基座准确率 95%，GRPO 无学习信号且导致 -3.2% 退化。
-改用五位数加法，预估基座准确率 50-70%，落入 GRPO 甜区。
+实验背景：
+- 三位数加法基座 95%，GRPO 无学习信号，退化 -3.2%（显著）
+- 五位数加法基座 83%，学习信号仍不足，退化 -1.28%（不显著）
+- 六位数加法预估基座 50-60%，落入 GRPO 甜区
 
 使用方法：
   python stage4_train.py
@@ -23,21 +25,21 @@ from trl import GRPOConfig, GRPOTrainer
 # 配置
 # ============================================================
 MODEL_PATH = "/models/Qwen2.5-1.5B-Instruct"
-OUTPUT_DIR = "/output/grpo_1.5b_5digit_addition"
-LOG_DIR = "/output/logs/stage4b"
+OUTPUT_DIR = "/output/grpo_1.5b_6digit_addition"
+LOG_DIR = "/output/logs/stage4c"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # ============================================================
-# 数据集：五位数加法（a, b ∈ [10000, 99999]，结果为 5-6 位数）
+# 数据集：六位数加法（a, b ∈ [100000, 999999]，结果为 6-7 位数）
 # ============================================================
 def make_addition_dataset(n=1000, seed=42):
     random.seed(seed)
     data = []
     for _ in range(n):
-        a = random.randint(10000, 99999)
-        b = random.randint(10000, 99999)
+        a = random.randint(100000, 999999)
+        b = random.randint(100000, 999999)
         data.append({"prompt": f"What is {a}+{b}? Answer with just the number.",
                       "answer": str(a + b)})
     return data
@@ -80,7 +82,7 @@ def format_reward(completions, **kwargs):
     for completion in completions:
         text = extract_text(completion)
         stripped = text.strip()
-        if re.match(r'^\d{5,6}$', stripped):
+        if re.match(r'^\d{6,7}$', stripped):
             rewards.append(0.2)
         elif re.match(r'^\d+$', stripped):
             rewards.append(0.1)
@@ -104,7 +106,7 @@ config = GRPOConfig(
 
     # 生成
     num_generations=8,              # G=8（4090 显存够）
-    max_completion_length=48,       # 5位数加法结果最多6位，留余量
+    max_completion_length=64,       # 6位数加法结果最多7位，留余量
     generation_kwargs={
         "temperature": 0.8,
         "do_sample": True,
@@ -138,7 +140,7 @@ def main():
     print("=" * 60)
     print("阶段 4：正式训练")
     print(f"  模型: {MODEL_PATH}")
-    print(f"  Task: 5-digit addition")
+    print(f"  Task: 6-digit addition")
     print(f"  G={config.num_generations}, temp=0.8")
     print(f"  lr={config.learning_rate}, beta={config.beta}")
     print(f"  max_steps={config.max_steps}")
