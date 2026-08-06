@@ -1,11 +1,14 @@
 """
-阶段 4c：正式训练脚本
-在 4090 (48GB) 上用 Qwen2.5-1.5B + G=8 训练六位数加法
+阶段 4d：正式训练脚本
+在 4090 (48GB) 上用 Qwen2.5-1.5B + LoRA + G=8 训练六位数加法
 
 实验背景：
-- 三位数加法基座 95%，GRPO 无学习信号，退化 -3.2%（显著）
-- 五位数加法基座 83%，学习信号仍不足，退化 -1.28%（不显著）
-- 六位数加法预估基座 50-60%，落入 GRPO 甜区
+- 三位数加法基座 95%，全参数微调退化 -3.2%（显著）
+- 五位数加法基座 83%，全参数微调退化 -1.28%（不显著）
+- 六位数加法基座 81%，全参数微调退化 -2.04%（不显著）
+- 三次实验均出现 collapse-recovery 模式：step 51-100 reward 暴跌，恢复后比原来差
+- 根因：全参数微调导致灾难性遗忘 + lr 过高
+- 本次改用 LoRA 适配器（冻结原始权重）+ 更保守的参数
 
 使用方法：
   python stage4_train.py
@@ -20,13 +23,14 @@ import torch
 from datasets import Dataset
 from transformers import AutoTokenizer
 from trl import GRPOConfig, GRPOTrainer
+from peft import LoraConfig
 
 # ============================================================
 # 配置
 # ============================================================
 MODEL_PATH = "/models/Qwen2.5-1.5B-Instruct"
-OUTPUT_DIR = "/output/grpo_1.5b_6digit_addition"
-LOG_DIR = "/output/logs/stage4c"
+OUTPUT_DIR = "/output/grpo_1.5b_6digit_lora"
+LOG_DIR = "/output/logs/stage4d"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -108,25 +112,25 @@ config = GRPOConfig(
     num_generations=8,              # G=8（4090 显存够）
     max_completion_length=64,       # 6位数加法结果最多7位，留余量
     generation_kwargs={
-        "temperature": 0.8,
+        "temperature": 0.9,         # 略高温以增加组内多样性
         "do_sample": True,
     },
 
     # vLLM 加速（暂时关闭，TRL 1.9.2 + vLLM 版本兼容性问题）
     use_vllm=False,
 
-    # 训练
-    learning_rate=5e-6,
+    # 训练（LoRA + 保守参数）
+    learning_rate=1e-5,             # LoRA 需要更高 lr（只训练少量参数）
     num_train_epochs=1,
     max_steps=500,                  # 500 步
-    warmup_steps=50,                # 更长预热，防止早期崩溃
+    warmup_steps=100,               # 更长预热，防止早期崩溃
     per_device_train_batch_size=4,
     gradient_accumulation_steps=2,  # 4×2=8，能被 G=8 整除
 
-    # 稳定性（比 3-digit 实验更保守）
-    beta=0.2,                       # 更强的 KL 约束
-    max_grad_norm=0.5,              # 梯度裁剪
-    epsilon=0.2,                    # PPO 裁剪（TRL 1.9.x 用 epsilon）
+    # 稳定性
+    beta=0.04,                      # LoRA 下 KL 惩罚可以小一些（权重冻结，不会跑偏太远）
+    max_grad_norm=1.0,              # LoRA 梯度通常较小，放宽裁剪
+    epsilon=0.2,                    # PPO 裁剪
 
     # 其他
     report_to="tensorboard",
@@ -134,16 +138,28 @@ config = GRPOConfig(
 )
 
 # ============================================================
+# LoRA 配置
+# ============================================================
+peft_config = LoraConfig(
+    r=32,                           # 秩：32（平衡容量和参数量）
+    lora_alpha=64,                  # alpha = 2*r 是常用设置
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0.05,
+    task_type="CAUSAL_LM",
+)
+
+# ============================================================
 # 主函数
 # ============================================================
 def main():
     print("=" * 60)
-    print("阶段 4：正式训练")
+    print("阶段 4d：LoRA + 6-digit addition")
     print(f"  模型: {MODEL_PATH}")
     print(f"  Task: 6-digit addition")
-    print(f"  G={config.num_generations}, temp=0.8")
+    print(f"  LoRA: r=32, alpha=64, dropout=0.05")
+    print(f"  G={config.num_generations}, temp=0.9")
     print(f"  lr={config.learning_rate}, beta={config.beta}")
-    print(f"  max_steps={config.max_steps}")
+    print(f"  max_steps={config.max_steps}, warmup={config.warmup_steps}")
     print(f"  vLLM: {config.use_vllm}")
     print("=" * 60)
 
@@ -152,12 +168,13 @@ def main():
     dataset = Dataset.from_list(raw_data).map(format_prompt)
     print(f"数据集大小: {len(dataset)}")
 
-    # 创建 Trainer
+    # 创建 Trainer（使用 LoRA）
     trainer = GRPOTrainer(
         model=MODEL_PATH,
         args=config,
         train_dataset=dataset,
         reward_funcs=[correctness_reward, format_reward],
+        peft_config=peft_config,
     )
 
     # 训练

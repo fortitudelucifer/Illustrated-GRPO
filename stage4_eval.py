@@ -12,9 +12,10 @@ import time
 import json
 import numpy as np
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
 
 MODEL_PATH = "/models/Qwen2.5-1.5B-Instruct"
-TRAINED_PATH = "/output/grpo_1.5b_6digit_addition"
+TRAINED_PATH = "/output/grpo_1.5b_6digit_lora"
 NUM_QUESTIONS = 500
 BATCH_SIZE = 64
 SEEDS = [42, 123, 456, 789, 999]
@@ -116,13 +117,17 @@ def main():
 
     del base_model
     torch.cuda.empty_cache()
+    torch.cuda.synchronize()
+    print(f"  GPU memory after base model unload: {torch.cuda.memory_allocated()/1e9:.2f} GB")
 
-    # Load trained model
-    print("\nLoading trained model...")
+    # Load trained model (LoRA adapter on top of base model)
+    print("\nLoading trained model (LoRA)...")
     t0 = time.time()
-    trained_model = AutoModelForCausalLM.from_pretrained(
-        TRAINED_PATH, dtype=torch.bfloat16, device_map="auto"
+    base_for_lora = AutoModelForCausalLM.from_pretrained(
+        MODEL_PATH, dtype=torch.bfloat16, device_map="auto"
     )
+    trained_model = PeftModel.from_pretrained(base_for_lora, TRAINED_PATH)
+    trained_model = trained_model.merge_and_unload()  # merge LoRA weights for inference
     print(f"  Loaded in {time.time() - t0:.1f}s")
 
     trained_results = []
@@ -187,7 +192,7 @@ def main():
         "improvement": float(trained_mean - base_mean),
     }
 
-    output_path = "/output/eval_results_6digit_500.json"
+    output_path = "/output/eval_results_6digit_lora_500.json"
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nResults saved to {output_path}")
