@@ -491,14 +491,35 @@ tensorboard --logdir output/runs --port 6006
 
 ```
 1. 选任务难度 → 让基座准确率在 30%-70%
-2. 选 G 和 temp → 让 frac_reward_zero_std < 70%
-3. 调 batch 和 accum → 满足显存 + 整除约束
-4. 设 max_grad_norm → 防梯度爆炸
-5. 设 beta → 控制 KL 在 1.0 以下
-6. 设 lr 和 warmup → 配合以上参数
-7. 跑 50 步观察日志 → 确认有学习信号
-8. 跑完整训练 → 对比训练前后准确率
+2. 选训练方式 → 全参数微调或 LoRA（对能力强的大模型推荐 LoRA）
+3. 选 G 和 temp → 让 frac_reward_zero_std < 70%
+4. 调 batch 和 accum → 满足显存 + 整除约束
+5. 设 max_grad_norm → 防梯度爆炸（0.5~1.0）
+6. 设 beta → LoRA 可以小（0.04），全参数需要大（0.1-0.2）
+7. 设 lr 和 warmup → LoRA 需要更高 lr（1e-5）和更长 warmup（100）
+8. 跑 50 步观察日志 → 确认有学习信号且无崩溃
+9. 跑完整训练 → 对比训练前后准确率，n≥200 且多个 seed
 ```
+
+### 1.5B 模型：5 次实验验证
+
+以上经验在 RTX 4090 上的 Qwen2.5-1.5B-Instruct（1.5B 参数）得到完整验证：
+
+| 编号 | 任务 | 方法 | 基座 | 训练后 | 变化 | 核心教训 |
+|------|------|------|------|--------|------|---------|
+| 1 | 3 位数加法 | 全参数 | 94.92% | 91.72% | -3.20% | 基座太高 + 全参数 = 灾难性遗忘 |
+| 2 | 5 位数加法 | 全参数 | 83.04% | 81.76% | -1.28% | 增加位数不够，准确率仍太高 |
+| 3 | 6 位数加法 | 全参数 | 80.84% | 78.80% | -2.04% | 同样的崩溃；全参数是根源 |
+| 4 | 6 位数加法 | LoRA | 80.84% | 82.84% | +2.00% | LoRA 解决遗忘，但任务仍太简单 |
+| **5** | **2 位数乘法** | **LoRA** | **67.44%** | **73.80%** | **+6.36%** | **LoRA + 合适任务 = 显著提升** |
+
+**最终成功配方**：
+- 任务：2 位数×2 位数乘法（基座准确率 67.4%，在甜区）
+- 方式：LoRA（r=32, alpha=64，作用于全部 attention/MLP 投影层）
+- 配置：lr=1e-5, beta=0.04, max_grad_norm=1.0, warmup=100, temp=0.9, G=8
+- 训练：500 步，4090 上 3 分 7 秒
+- 评估：500 题×5 seed = 2500 个样本，Wilson 95% CI
+- 结果：67.44% → 73.80%，5/5 seed 提升，统计显著
 
 ### 常见问题速查
 
@@ -533,15 +554,30 @@ tensorboard --logdir output/runs --port 6006
 
 ## 九、进度追踪
 
+### 9.1 阶段
+
 - [x] 阶段 0：环境准备（模型下载 + 文档创建）
 - [x] 阶段 1：玩具算法理解（`stage1_toy_grpo.ipynb`）
 - [x] 阶段 2：最小 LLM GRPO 训练（`stage2_trl_grpo.ipynb`）
 - [x] 阶段 3：阅读源码（`stage3_source_code.ipynb`）
 - [x] 阶段 4：4090 正式训练（`stage4_notebook.ipynb` + `stage4_train.py` + `stage4_eval.py` + `stage4_deploy.sh` + `Dockerfile`）
-- [x] 阶段 4：训练记录与评估结果（500题×5个seed，详见 `output/stage4_eval_results.md`）
-- [x] 全过程训练总结（`stage4_summary.md`）
-- [ ] 阶段 5：自定义奖励函数实验
-- [ ] 阶段 6：评估与可视化
+- [x] 阶段 4：1.5B 完整 5 次实验系列（见下表）
+- [x] 阶段 5：自定义奖励函数实验（规则正确性奖励 + 格式奖励）
+- [x] 阶段 6：评估与可视化（500题×5个seed、Wilson CI、批推理）
+
+### 9.2 1.5B 实验记录
+
+| 编号 | 任务 | 方法 | 基座准确率 | 训练后准确率 | 变化 | 显著性？ | 报告 |
+|------|------|------|-----------|------------|------|---------|------|
+| 1 | 3 位数加法 | 全参数微调 | 94.92% | 91.72% | -3.20% | 显著退化 | `experiment_report_3digit.md` |
+| 2 | 5 位数加法 | 全参数微调 | 83.04% | 81.76% | -1.28% | 不显著 | `experiment_report_overall.md` |
+| 3 | 6 位数加法 | 全参数微调 | 80.84% | 78.80% | -2.04% | 不显著 | `experiment_report_overall.md` |
+| 4 | 6 位数加法 | LoRA | 80.84% | 82.84% | +2.00% | 不显著（但正向） | `experiment_report_6digit_lora.md` |
+| **5** | **2 位数乘法** | **LoRA** | **67.44%** | **73.80%** | **+6.36%** | **显著提升** | `experiment_report_multiplication.md` |
+
+**核心结果**：Qwen2.5-1.5B-Instruct + GRPO + LoRA，2 位数乘法，500 步，4090 上 3 分 7 秒：**67.44% → 73.80%**（5/5 seed 提升，统计显著）。
+
+**完整进化**：见 `experiment_report_overall.md` — 从失败到成功的全过程。
 
 ---
 
@@ -550,7 +586,12 @@ tensorboard --logdir output/runs --port 6006
 ```
 illustrated-grpo/
 ├── README.md                      # 项目主文档：GRPO 原理 + 硬件 + 进度
-├── stage4_summary.md              # 全过程训练总结（每次训练的参数/结果/改动原因）
+├── README-cn.md                   # 主文档（中文）
+├── experiment_report_3digit.md         # 实验 1：3 位数加法全参数失败（-3.2%）
+├── experiment_report_6digit_lora.md    # 实验 4：6 位数加法 LoRA 首次正向（+2.0%）
+├── experiment_report_multiplication.md # 实验 5：2 位数乘法 LoRA 成功（+6.36%）
+├── experiment_report_overall.md        # 5 次实验完整历程与最终结论
+├── stage4_summary.md                   # 全过程训练总结（每次训练的参数/结果/改动原因）
 ├── 4090_agent_上手指南.md          # 4090 服务器环境说明
 ├── requirements.txt               # 依赖说明
 ├── Dockerfile                     # 阶段 4 Docker 镜像定义
@@ -568,9 +609,20 @@ illustrated-grpo/
 │
 └── output/                        # 训练记录（不含模型权重）
     ├── README.md                  # 训练输出说明
-    ├── stage4_eval_results.md     # 阶段 4 评估结果汇总
-    ├── stage4_trainer_state.json  # 阶段 4 完整 500 步训练历史
+    ├── stage4_eval_results.md     # 阶段 4 评估结果汇总（3 位数加法）
+    ├── stage4_trainer_state.json  # 阶段 4 完整 500 步训练历史（3 位数）
     ├── stage4_runs/               # 阶段 4 TensorBoard 日志
+    ├── stage4b_trainer_state.json # 实验 2：5 位数加法训练日志
+    ├── stage4b_runs/              # 实验 2：5 位数加法 TensorBoard 日志
+    ├── stage4c_trainer_state.json # 实验 3：6 位数加法全参数训练日志
+    ├── stage4c_runs/              # 实验 3：6 位数加法全参数 TensorBoard 日志
+    ├── eval_results_6digit_500.json       # 实验 3：6 位数全参数评估
+    ├── stage4d_trainer_state.json         # 实验 4：6 位数加法 LoRA 训练日志
+    ├── stage4d_runs/                      # 实验 4：6 位数加法 LoRA TensorBoard 日志
+    ├── eval_results_6digit_lora_500.json  # 实验 4：6 位数 LoRA 评估
+    ├── stage4e_trainer_state.json         # 实验 5：2 位数乘法 LoRA 训练日志
+    ├── stage4e_runs/                      # 实验 5：2 位数乘法 LoRA TensorBoard 日志
+    ├── eval_results_2digit_mul_lora_500.json  # 实验 5：2 位数乘法评估
     ├── runs/                      # 阶段 2 TensorBoard 日志
     └── completions/               # 阶段 2 训练中模型生成的回答记录
 ```
@@ -585,4 +637,4 @@ illustrated-grpo/
 4. **遇到不懂的术语**：回到第 0.3 节术语表查
 5. **遇到不懂的公式**：回到第 4 节看对应的生活类比和数学知识映射
 6. **每个阶段的"理解检查点"都要过**：确认自己能回答那些问题再进入下一阶段
-7. **想了解完整训练历程**：看 `stage4_summary.md`，记录了每次训练的参数、结果、改动原因和效果改进
+7. **想了解完整训练历程**：看 `experiment_report_overall.md` — 记录了从 -3.2% 退化为 +6.36% 成功的全过程。另见 `experiment_report_3digit.md`、`experiment_report_6digit_lora.md`、`experiment_report_multiplication.md` 等分项实验深度报告。
