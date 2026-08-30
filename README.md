@@ -491,14 +491,35 @@ Key metrics:
 
 ```
 1. Choose task difficulty → base accuracy in 30%-70%
-2. Choose G and temp → get frac_reward_zero_std < 70%
-3. Adjust batch and accum → satisfy VRAM + divisibility constraint
-4. Set max_grad_norm → prevent gradient explosion
-5. Set beta → keep KL below 1.0
-6. Set lr and warmup → work with above parameters
-7. Run 50 steps, observe logs → confirm learning signal
-8. Run full training → compare before/after accuracy
+2. Choose fine-tuning method → Full FT or LoRA (recommend LoRA for capable models)
+3. Choose G and temp → get frac_reward_zero_std < 70%
+4. Adjust batch and accum → satisfy VRAM + divisibility constraint
+5. Set max_grad_norm → prevent gradient explosion (0.5~1.0)
+6. Set beta → LoRA can use lower beta (0.04), full FT needs higher (0.1-0.2)
+7. Set lr and warmup → LoRA needs higher lr (1e-5) and longer warmup (100)
+8. Run 50 steps, observe logs → confirm learning signal and no collapse
+9. Run full training → compare before/after accuracy with n≥200 and multiple seeds
 ```
+
+### 1.5B Model: 5-Experiment Verification
+
+The above lessons were verified on a full 1.5B-parameter model (Qwen2.5-1.5B-Instruct) on RTX 4090:
+
+| # | Task | Method | Base | Trained | Change | Key Lesson |
+|---|------|--------|------|---------|--------|-----------|
+| 1 | 3-digit addition | Full FT | 94.92% | 91.72% | -3.20% | High base accuracy + full FT = catastrophic forgetting |
+| 2 | 5-digit addition | Full FT | 83.04% | 81.76% | -1.28% | Adding digits doesn't lower accuracy enough |
+| 3 | 6-digit addition | Full FT | 80.84% | 78.80% | -2.04% | Same collapse pattern; full FT is the problem |
+| 4 | 6-digit addition | LoRA | 80.84% | 82.84% | +2.00% | LoRA fixes forgetting, but task still too easy |
+| **5** | **2-digit multiplication** | **LoRA** | **67.44%** | **73.80%** | **+6.36%** | **LoRA + right task = significant improvement** |
+
+**Final recipe that worked**:
+- Task: 2-digit × 2-digit multiplication (base accuracy 67.4% — in sweet spot)
+- Method: LoRA (r=32, alpha=64, target all attention/MLP projection layers)
+- Config: lr=1e-5, beta=0.04, max_grad_norm=1.0, warmup=100, temp=0.9, G=8
+- Training: 500 steps, 3 min 7 sec on RTX 4090
+- Evaluation: 500 questions × 5 seeds = 2,500 samples, Wilson 95% CI
+- Result: 67.44% → 73.80%, 5/5 seeds improved, statistically significant
 
 ### Common Issues Quick Reference
 
@@ -533,15 +554,30 @@ Key metrics:
 
 ## 9. Progress Tracking
 
+### 9.1 Stages
+
 - [x] Stage 0: Environment setup (model download + documentation)
 - [x] Stage 1: Toy algorithm understanding (`stage1_toy_grpo.ipynb`)
 - [x] Stage 2: Minimal LLM GRPO training (`stage2_trl_grpo.ipynb`)
 - [x] Stage 3: Source code reading (`stage3_source_code.ipynb`)
 - [x] Stage 4: 4090 formal training (`stage4_notebook.ipynb` + `stage4_train.py` + `stage4_eval.py` + `stage4_deploy.sh` + `Dockerfile`)
-- [x] Stage 4: Training records & evaluation results (500 questions × 5 seeds, see `output/stage4_eval_results.md`)
-- [x] Complete training summary (`stage4_summary.md`)
-- [ ] Stage 5: Custom reward function experiments
-- [ ] Stage 6: Evaluation & visualization
+- [x] Stage 4: Complete 1.5B experiment series (5 training runs, see below)
+- [x] Stage 5: Custom reward function experiments (rule-based correctness + format rewards across tasks)
+- [x] Stage 6: Evaluation & visualization (500 questions × 5 seeds, Wilson CI, batch inference)
+
+### 9.2 1.5B Experiment Records
+
+| # | Task | Method | Base Accuracy | Trained Accuracy | Change | Significant? | Report |
+|---|------|--------|---------------|------------------|--------|--------------|--------|
+| 1 | 3-digit addition | Full FT | 94.92% | 91.72% | -3.20% | YES (regression) | `experiment_report_3digit.md` |
+| 2 | 5-digit addition | Full FT | 83.04% | 81.76% | -1.28% | No | `experiment_report_overall.md` |
+| 3 | 6-digit addition | Full FT | 80.84% | 78.80% | -2.04% | No | `experiment_report_overall.md` |
+| 4 | 6-digit addition | LoRA | 80.84% | 82.84% | +2.00% | No (but positive) | `experiment_report_6digit_lora.md` |
+| **5** | **2-digit multiplication** | **LoRA** | **67.44%** | **73.80%** | **+6.36%** | **YES (improvement)** | `experiment_report_multiplication.md` |
+
+**Key result**: Qwen2.5-1.5B-Instruct + GRPO + LoRA, 2-digit multiplication, 500 steps, 3 minutes on RTX 4090: **67.44% → 73.80%** (statistically significant, 5/5 seeds improved).
+
+**For the complete journey**: see `experiment_report_overall.md` — records the full evolution from failure to success.
 
 ---
 
@@ -551,7 +587,11 @@ Key metrics:
 illustrated-grpo/
 ├── README.md                      # Main doc: GRPO theory + hardware + progress (English)
 ├── README-cn.md                   # Main doc (Chinese)
-├── stage4_summary.md              # Complete training summary (parameters/results/changes per run)
+├── experiment_report_3digit.md         # Exp 1: 3-digit addition full FT failure (-3.2%)
+├── experiment_report_6digit_lora.md    # Exp 4: 6-digit addition LoRA first positive (+2.0%)
+├── experiment_report_multiplication.md # Exp 5: 2-digit multiplication LoRA success (+6.36%)
+├── experiment_report_overall.md        # Complete 5-experiment journey and conclusions
+├── stage4_summary.md                   # Stage 1-4 training summary (parameters/results)
 ├── 4090_agent_上手指南.md          # 4090 server environment guide
 ├── requirements.txt               # Dependencies
 ├── Dockerfile                     # Stage 4 Docker image definition
@@ -569,9 +609,20 @@ illustrated-grpo/
 │
 └── output/                        # Training records (no model weights)
     ├── README.md                  # Output directory description
-    ├── stage4_eval_results.md     # Stage 4 evaluation results summary
-    ├── stage4_trainer_state.json  # Stage 4 complete 500-step training history
+    ├── stage4_eval_results.md     # Stage 4 evaluation results summary (3-digit addition)
+    ├── stage4_trainer_state.json  # Stage 4 complete 500-step training history (3-digit)
     ├── stage4_runs/               # Stage 4 TensorBoard logs
+    ├── stage4b_trainer_state.json # Exp 2: 5-digit addition training log
+    ├── stage4b_runs/              # Exp 2: 5-digit addition TensorBoard logs
+    ├── stage4c_trainer_state.json # Exp 3: 6-digit addition full FT training log
+    ├── stage4c_runs/              # Exp 3: 6-digit addition full FT TensorBoard logs
+    ├── eval_results_6digit_500.json       # Exp 3: 6-digit full FT evaluation
+    ├── stage4d_trainer_state.json         # Exp 4: 6-digit addition LoRA training log
+    ├── stage4d_runs/                      # Exp 4: 6-digit addition LoRA TensorBoard logs
+    ├── eval_results_6digit_lora_500.json  # Exp 4: 6-digit LoRA evaluation
+    ├── stage4e_trainer_state.json         # Exp 5: 2-digit multiplication LoRA training log
+    ├── stage4e_runs/                      # Exp 5: 2-digit multiplication LoRA TensorBoard logs
+    ├── eval_results_2digit_mul_lora_500.json  # Exp 5: 2-digit multiplication evaluation
     ├── runs/                      # Stage 2 TensorBoard logs
     └── completions/               # Stage 2 model-generated answer records
 ```
@@ -586,4 +637,4 @@ illustrated-grpo/
 4. **Unfamiliar terms**: Refer back to section 0.3 terminology table
 5. **Unfamiliar formulas**: Refer back to section 4 for analogies and math knowledge mapping
 6. **Pass every understanding checkpoint**: Make sure you can answer those questions before moving on
-7. **For the complete training journey**: See `stage4_summary.md` — records every training run's parameters, results, reasons for changes, and improvements
+7. **For the complete training journey**: See `experiment_report_overall.md` — records the full evolution from -3.2% regression to +6.36% success. Also see `experiment_report_3digit.md`, `experiment_report_6digit_lora.md`, and `experiment_report_multiplication.md` for individual experiment deep-dives.
