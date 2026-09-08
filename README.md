@@ -7,6 +7,16 @@
 
 ---
 
+## Results at a glance
+
+Five saved GRPO experiments on Qwen2.5-1.5B-Instruct compare base and trained accuracy. The three full-parameter configurations regress; the LoRA configurations improve by **2.00 percentage points on 6-digit addition** and **6.36 percentage points on 2-digit multiplication**. Each result summarizes five evaluation question batches, not five independent training runs; multiple hyperparameters differ between configurations.
+
+![Overview of base and trained accuracy across five GRPO experiments](docs/figures/grpo/01_results_overview.png)
+
+[See all six figures and their interpretation](#experiment-figures-five-grpo-training-runs)
+
+---
+
 ## 0. Prerequisites for Beginners
 
 > Your math background (calculus, linear algebra, probability & statistics) is more than enough. Below maps what you already know to GRPO concepts.
