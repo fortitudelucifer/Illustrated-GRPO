@@ -581,6 +581,70 @@ tensorboard --logdir output/runs --port 6006
 
 ---
 
+
+## 实验图解：五次 GRPO 训练
+
+以下六张图均由仓库已有 JSON 生成。每种配置只有一份已存训练记录；五个 seed 用于生成评估题集，每批 500 题，采用贪心解码。所有图均为描述性展示，不把单模型 Wilson 区间当作提升量的配对区间，也不报告独立训练重复的显著性。历史报告中的显著性表述不由这些图重新验证。
+
+训练图的浅线保留原始日志，粗线为向后 20 步移动平均，从第 20 步开始；不删除尖峰或失败实验。
+
+### 1. 五次实验结果总览
+
+![五次实验结果总览](docs/figures/grpo/01_results_overview.png)
+
+横向连接基座与训练后准确率，右侧给出百分点变化。三组全参数微调分别变化 −3.20、−1.28、−2.04 个百分点；六位数加法 LoRA 为 +2.00，两位数乘法 LoRA 为 +6.36。不同任务是不同实验条件，不是一条连续的学习曲线。
+
+[SVG](docs/figures/grpo/01_results_overview.svg) · [PDF](docs/figures/grpo/01_results_overview.pdf)
+
+### 2. 同一任务的训练稳定性
+
+![同一任务的训练稳定性](docs/figures/grpo/02_training_stability.png)
+
+六位数加法的 Full FT 配置出现明显的早期正确性奖励下降及 KL、梯度范数上升；对应 LoRA 配置的轨迹较稳定。两组还调整了学习率、KL 系数等超参数，因此本图展示配置差异，不能单独归因于 LoRA。梯度范数按日志原值展示。
+
+[SVG](docs/figures/grpo/02_training_stability.svg) · [PDF](docs/figures/grpo/02_training_stability.pdf)
+
+### 3. 奖励差异在训练中何时出现
+
+![奖励差异在训练中何时出现](docs/figures/grpo/03_reward_signal.png)
+
+每行保留完整 500 步的 frac_reward_zero_std。蓝绿色为 0，表示组内奖励存在差异；灰色为 1，表示没有差异。满足该值 <0.99 的步数占比分别为 18.2%、32.6%、22.2%、15.8%、28.0%。五位数加法该比例最高却最终退化，说明奖励差异出现更多不保证评估提升；该比例不等同于有效梯度比例。
+
+[SVG](docs/figures/grpo/03_reward_signal.svg) · [PDF](docs/figures/grpo/03_reward_signal.pdf)
+
+### 4. 五批评估题的配对结果
+
+![五批评估题的配对结果](docs/figures/grpo/04_evaluation_batches.png)
+
+两位数乘法 LoRA 在五批题集上的提升分别为 +7.0、+7.0、+6.2、+6.4、+5.2 个百分点。每行的前后结果使用同一个题集生成 seed；这说明改善不只来自其中一批题，但不是五次独立训练的复现证据。
+
+[SVG](docs/figures/grpo/04_evaluation_batches.svg) · [PDF](docs/figures/grpo/04_evaluation_batches.pdf)
+
+### 5. 奖励恢复与最终评估可以不同步
+
+![奖励恢复与最终评估可以不同步](docs/figures/grpo/05_reward_vs_evaluation.png)
+
+三位数加法 Full FT 的训练奖励后期恢复到较高水平，但最终评估准确率由 94.92% 降到 91.72%。训练总奖励包含格式奖励，和评估准确率不是同一个指标；图中只有最终评估，没有逐 checkpoint 验证曲线。
+
+[SVG](docs/figures/grpo/05_reward_vs_evaluation.svg) · [PDF](docs/figures/grpo/05_reward_vs_evaluation.pdf)
+
+### 6. 拆开正确性奖励与格式奖励
+
+![拆开正确性奖励与格式奖励](docs/figures/grpo/06_reward_components.png)
+
+分别展示两组 LoRA 配置的正确性、格式、总奖励，避免把格式奖励误当成算术能力提升。格式奖励大部分时间接近 0.2；总奖励的主要变化来自正确性项。三个面板使用各分量的自然范围，不能按视觉高度直接比较分量大小。
+
+[SVG](docs/figures/grpo/06_reward_components.svg) · [PDF](docs/figures/grpo/06_reward_components.pdf)
+
+### 数据与复现
+
+[Source JSON](output/) · [Training CSV](docs/figures/grpo/training_data.csv) · [Evaluation CSV](docs/figures/grpo/evaluation_data.csv) · [Validation](docs/figures/grpo/validation.json) · [Plotting script](docs/figures/grpo/render.py)
+
+```bash
+# Requires Python, numpy and matplotlib
+python docs/figures/grpo/render.py
+```
+
 ## 十、仓库结构
 
 ```

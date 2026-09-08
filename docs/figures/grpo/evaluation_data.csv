@@ -1,0 +1,26 @@
+experiment,evaluation_seed,base_accuracy,trained_accuracy
+3-digit addition | Full FT,42,0.958,0.914
+3-digit addition | Full FT,123,0.932,0.934
+3-digit addition | Full FT,456,0.958,0.91
+3-digit addition | Full FT,789,0.95,0.896
+3-digit addition | Full FT,999,0.948,0.932
+5-digit addition | Full FT,42,0.832,0.87
+5-digit addition | Full FT,123,0.82,0.798
+5-digit addition | Full FT,456,0.826,0.808
+5-digit addition | Full FT,789,0.83,0.784
+5-digit addition | Full FT,999,0.844,0.828
+6-digit addition | Full FT,42,0.8,0.788
+6-digit addition | Full FT,123,0.788,0.764
+6-digit addition | Full FT,456,0.828,0.796
+6-digit addition | Full FT,789,0.802,0.824
+6-digit addition | Full FT,999,0.824,0.768
+6-digit addition | LoRA,42,0.8,0.852
+6-digit addition | LoRA,123,0.788,0.804
+6-digit addition | LoRA,456,0.828,0.852
+6-digit addition | LoRA,789,0.802,0.802
+6-digit addition | LoRA,999,0.824,0.832
+2-digit multiplication | LoRA,42,0.648,0.718
+2-digit multiplication | LoRA,123,0.67,0.74
+2-digit multiplication | LoRA,456,0.664,0.726
+2-digit multiplication | LoRA,789,0.696,0.76
+2-digit multiplication | LoRA,999,0.694,0.746

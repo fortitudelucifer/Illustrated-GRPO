@@ -1,0 +1,98 @@
+{
+  "figures": [
+    {
+      "id": "01_results_overview",
+      "claim": "Observed mean accuracy changes across five configurations.",
+      "size_inches": [
+        12.0,
+        7.0
+      ],
+      "formats": [
+        "png",
+        "svg",
+        "pdf"
+      ]
+    },
+    {
+      "id": "02_training_stability",
+      "claim": "Compare observed reward, KL and gradient trajectories on the same task.",
+      "size_inches": [
+        12.0,
+        9.0
+      ],
+      "formats": [
+        "png",
+        "svg",
+        "pdf"
+      ]
+    },
+    {
+      "id": "03_reward_signal",
+      "claim": "Distribution of logged zero-reward-standard-deviation fractions over training.",
+      "size_inches": [
+        12.0,
+        7.0
+      ],
+      "formats": [
+        "png",
+        "svg",
+        "pdf"
+      ]
+    },
+    {
+      "id": "04_evaluation_batches",
+      "claim": "All five saved multiplication evaluation batches show positive changes.",
+      "size_inches": [
+        12.0,
+        7.0
+      ],
+      "formats": [
+        "png",
+        "svg",
+        "pdf"
+      ]
+    },
+    {
+      "id": "05_reward_vs_evaluation",
+      "claim": "Late training reward does not establish an improvement in final evaluation accuracy.",
+      "size_inches": [
+        12.0,
+        7.0
+      ],
+      "formats": [
+        "png",
+        "svg",
+        "pdf"
+      ]
+    },
+    {
+      "id": "06_reward_components",
+      "claim": "Correctness and format contributions to total reward are shown separately.",
+      "size_inches": [
+        12.0,
+        9.0
+      ],
+      "formats": [
+        "png",
+        "svg",
+        "pdf"
+      ]
+    }
+  ],
+  "sources": {
+    "eval_results_2digit_mul_lora_500.json": "77ab6275f25ce2d358da5d1c1debd420d4ff849c041a73a2ba48604b561d21b0",
+    "eval_results_500.json": "5c74beaeda355351c335d7b38227ea912f884b23eb0cc285f2844baf100e5a3e",
+    "eval_results_5digit_500.json": "00121f6bb5f89ba1884b3c92a5ec6d453f950436bb82aedd4412c7c4db5862b1",
+    "eval_results_6digit_500.json": "aa2b843648541441cc42e8c907f16b8bc59ba7e30d12a30447ef8696d0fc0d9c",
+    "eval_results_6digit_lora_500.json": "43a7dd62edaf14edfb895893dcfe6be71bfc8f87bab0fd881ca95f76bfb2e554",
+    "stage4b_trainer_state.json": "f93785d16fa61d84842661ff5072b19259f5feaf43717521ff64b6d531dbd8d2",
+    "stage4c_trainer_state.json": "a3117632746506a4bfa11b2de687eee049b110e1e6aeee147fee06c1e992bebd",
+    "stage4d_trainer_state.json": "74f919b87da298a48ae7d4660d6772e4f7b02693b2aba04b00fe25c68aba6a95",
+    "stage4e_trainer_state.json": "8598d5a50d7b766a412dccab484744abfb06210413b2e2fa0409e454c473ba6d",
+    "stage4_trainer_state.json": "67bbb2f911d794720f3ab487fe2091f7e49dd60f4dc19162acbdb0184b58034b"
+  },
+  "uncertainty": "Descriptive only; no training-replicate inference or paired question-level CI.",
+  "smoothing": "Trailing 20-step arithmetic mean; raw observations retained.",
+  "missing_policy": "All 500 steps and all five evaluation batches retained.",
+  "randomness": "No random sampling or jitter."
+}

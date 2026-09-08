@@ -581,6 +581,70 @@ The above lessons were verified on a full 1.5B-parameter model (Qwen2.5-1.5B-Ins
 
 ---
 
+
+## Experiment figures: five GRPO training runs
+
+All six figures are generated from the saved repository JSON files. There is one saved training run per configuration. Five seeds generate evaluation question batches of 500 questions each, using greedy decoding. These are descriptive figures: individual-model Wilson intervals are not treated as paired improvement intervals, and no independent-training significance is reported. These figures do not revalidate significance statements in the historical reports.
+
+Training plots retain raw logs as thin lines and use a trailing 20-step mean as the thick line, starting at step 20. Spikes and failed experiments are retained.
+
+### 1. Five-experiment overview
+
+![Five-experiment overview](docs/figures/grpo/01_results_overview.png)
+
+Connected markers show base and trained accuracy; the right panel reports percentage-point changes. The three full-FT configurations change by −3.20, −1.28 and −2.04 pp; 6-digit addition with LoRA changes by +2.00 pp, and 2-digit multiplication with LoRA by +6.36 pp. Tasks are separate experimental conditions, not a continuous learning trajectory.
+
+[SVG](docs/figures/grpo/01_results_overview.svg) · [PDF](docs/figures/grpo/01_results_overview.pdf)
+
+### 2. Training stability on the same task
+
+![Training stability on the same task](docs/figures/grpo/02_training_stability.png)
+
+On 6-digit addition, the full-FT configuration shows an early correctness-reward decline with higher KL and gradient norms; the saved LoRA configuration is more stable. Learning rate, KL coefficient and other settings also differ, so this is a configuration comparison rather than an isolated LoRA ablation. Gradient norms are displayed as logged.
+
+[SVG](docs/figures/grpo/02_training_stability.svg) · [PDF](docs/figures/grpo/02_training_stability.pdf)
+
+### 3. When reward variation appears
+
+![When reward variation appears](docs/figures/grpo/03_reward_signal.png)
+
+Each row retains all 500 logged frac_reward_zero_std values. Teal denotes 0 (within-group reward variation); gray denotes 1 (no variation). Shares of steps below 0.99 are 18.2%, 32.6%, 22.2%, 15.8% and 28.0%. The 5-digit addition run has the highest share but regresses in evaluation: more reward-varying steps do not guarantee an improvement. This measure is not the fraction of useful gradients.
+
+[SVG](docs/figures/grpo/03_reward_signal.svg) · [PDF](docs/figures/grpo/03_reward_signal.pdf)
+
+### 4. Paired evaluation-batch results
+
+![Paired evaluation-batch results](docs/figures/grpo/04_evaluation_batches.png)
+
+Multiplication gains are +7.0, +7.0, +6.2, +6.4 and +5.2 pp across five generated question batches. Each row pairs base and trained results using the same question-generation seed. Improvement is observed in every batch, but these are not five independently trained models.
+
+[SVG](docs/figures/grpo/04_evaluation_batches.svg) · [PDF](docs/figures/grpo/04_evaluation_batches.pdf)
+
+### 5. Reward recovery versus final evaluation
+
+![Reward recovery versus final evaluation](docs/figures/grpo/05_reward_vs_evaluation.png)
+
+For 3-digit addition with full FT, late training reward recovers while final evaluation accuracy falls from 94.92% to 91.72%. Total training reward includes a format bonus and is a different metric from evaluation accuracy. Only final evaluation is available; this is not a checkpoint validation curve.
+
+[SVG](docs/figures/grpo/05_reward_vs_evaluation.svg) · [PDF](docs/figures/grpo/05_reward_vs_evaluation.pdf)
+
+### 6. Correctness and format reward components
+
+![Correctness and format reward components](docs/figures/grpo/06_reward_components.png)
+
+Separate panels show correctness, format and total rewards for the two LoRA configurations. Format reward stays near 0.2 for much of training; correctness accounts for most variation in total reward. Each panel uses its component range, so visual heights across panels should not be compared as component magnitudes.
+
+[SVG](docs/figures/grpo/06_reward_components.svg) · [PDF](docs/figures/grpo/06_reward_components.pdf)
+
+### Data and reproduction
+
+[Source JSON](output/) · [Training CSV](docs/figures/grpo/training_data.csv) · [Evaluation CSV](docs/figures/grpo/evaluation_data.csv) · [Validation](docs/figures/grpo/validation.json) · [Plotting script](docs/figures/grpo/render.py)
+
+```bash
+# Requires Python, numpy and matplotlib
+python docs/figures/grpo/render.py
+```
+
 ## 10. Repository Structure
 
 ```
