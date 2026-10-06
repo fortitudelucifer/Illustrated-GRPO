@@ -1,5 +1,8 @@
 # Experiment Report: GRPO on 3-Digit Addition with Qwen2.5-1.5B
 
+> [!CAUTION]
+> **Legacy exploratory report.** Training and one evaluation partition use seed 42 with the same generation order, so that partition is not held out. The five seeds below are evaluation partitions for one checkpoint, not independent training runs; no per-question paired significance analysis was saved. See [Evaluation Status](EVALUATION_STATUS.md).
+
 > **Date**: 2026-08-06
 > **Model**: Qwen2.5-1.5B-Instruct
 > **Task**: 3-digit integer addition (a, b ∈ [100, 999])

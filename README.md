@@ -5,11 +5,14 @@
 > Paper: [The Illustrated GRPO (Towards AI)](https://towardsai.com/p/l/group-relative-policy-optimization-grpo-illustrated-breakdown-explanation)
 > Original algorithm paper: [DeepSeekMath (arXiv:2402.03300)](https://arxiv.org/abs/2402.03300)
 
+> [!IMPORTANT]
+> **Evaluation status:** A post-hoc audit found operand-pair overlap between the Stage 4 training and evaluation sets. For two-digit multiplication, 722/2,500 evaluation rows repeat ordered training pairs (892/2,500 modulo commutativity), including all 500 rows in the seed-42 partition. The reported `+6.36` percentage-point difference is retained as a legacy exploratory observation, not as evidence of held-out generalization or statistical significance. The five evaluation seeds are question-generation partitions for one checkpoint, not independent training runs. See [Evaluation Status](EVALUATION_STATUS.md).
+
 ---
 
 ## Results at a glance
 
-Five saved GRPO experiments on Qwen2.5-1.5B-Instruct compare base and trained accuracy. The three full-parameter configurations regress; the LoRA configurations improve by **2.00 percentage points on 6-digit addition** and **6.36 percentage points on 2-digit multiplication**. Each result summarizes five evaluation question batches, not five independent training runs; multiple hyperparameters differ between configurations.
+Five saved GRPO experiments on Qwen2.5-1.5B-Instruct compare base and trained accuracy under the original protocol. The observed differences are descriptive legacy results: the multiplication evaluation overlaps training, each configuration has one saved training run, and multiple hyperparameters differ between configurations. The `+6.36` percentage-point multiplication value is not a held-out generalization claim.
 
 ![Overview of base and trained accuracy across five GRPO experiments](docs/figures/grpo/01_results_overview.png)
 
@@ -447,7 +450,7 @@ Key metrics:
 | 2-digit addition | ~90% | Very low (almost all correct) | No learning |
 | 3-digit addition | ~50% | Higher (mix of correct/wrong) | Effective learning |
 
-**Rule of thumb**: GRPO works best when base model accuracy is 30%-70%. Too high (all correct) or too low (all wrong) won't work.
+**Exploratory heuristic from these runs**: an intermediate success rate may produce more mixed-reward groups. The observed 30%-70% range is not a confirmed universal GRPO optimum; training-time reward variation should be measured directly.
 
 #### 3. Temperature Choice is a Balancing Act
 
@@ -511,25 +514,25 @@ Key metrics:
 9. Run full training → compare before/after accuracy with n≥200 and multiple seeds
 ```
 
-### 1.5B Model: 5-Experiment Verification
+### 1.5B Model: 5-Experiment Exploratory Record
 
-The above lessons were verified on a full 1.5B-parameter model (Qwen2.5-1.5B-Instruct) on RTX 4090:
+The following values were observed under the original Stage 4 protocols. They are retained as historical results, not as confirmatory held-out effects:
 
 | # | Task | Method | Base | Trained | Change | Key Lesson |
 |---|------|--------|------|---------|--------|-----------|
-| 1 | 3-digit addition | Full FT | 94.92% | 91.72% | -3.20% | High base accuracy + full FT = catastrophic forgetting |
-| 2 | 5-digit addition | Full FT | 83.04% | 81.76% | -1.28% | Adding digits doesn't lower accuracy enough |
-| 3 | 6-digit addition | Full FT | 80.84% | 78.80% | -2.04% | Same collapse pattern; full FT is the problem |
-| 4 | 6-digit addition | LoRA | 80.84% | 82.84% | +2.00% | LoRA fixes forgetting, but task still too easy |
-| **5** | **2-digit multiplication** | **LoRA** | **67.44%** | **73.80%** | **+6.36%** | **LoRA + right task = significant improvement** |
+| 1 | 3-digit addition | Full FT | 94.92% | 91.72% | -3.20 pp | Task-level regression in this configuration |
+| 2 | 5-digit addition | Full FT | 83.04% | 81.76% | -1.28 pp | Descriptive legacy result |
+| 3 | 6-digit addition | Full FT | 80.84% | 78.80% | -2.04 pp | Similar instability in this configuration |
+| 4 | 6-digit addition | LoRA | 80.84% | 82.84% | +2.00 pp | Configuration-level descriptive comparison |
+| **5** | **2-digit multiplication** | **LoRA** | **67.44%** | **73.80%** | **+6.36 pp** | **Legacy observation with train/evaluation overlap** |
 
-**Final recipe that worked**:
-- Task: 2-digit × 2-digit multiplication (base accuracy 67.4% — in sweet spot)
+**Legacy multiplication configuration and observation**:
+- Task: 2-digit × 2-digit multiplication, selected as an intermediate-difficulty candidate
 - Method: LoRA (r=32, alpha=64, target all attention/MLP projection layers)
 - Config: lr=1e-5, beta=0.04, max_grad_norm=1.0, warmup=100, temp=0.9, G=8
-- Training: 500 steps, 3 min 7 sec on RTX 4090
-- Evaluation: 500 questions × 5 seeds = 2,500 samples, Wilson 95% CI
-- Result: 67.44% → 73.80%, 5/5 seeds improved, statistically significant
+- Training: one 500-step run, reported as 3 min 7 sec on RTX 4090
+- Evaluation: five question-generation partitions for the same checkpoint, 500 rows each
+- Observed result: 67.44% → 73.80% under the overlapping legacy protocol; no held-out or statistical-significance claim is supported
 
 ### Common Issues Quick Reference
 
@@ -577,24 +580,24 @@ The above lessons were verified on a full 1.5B-parameter model (Qwen2.5-1.5B-Ins
 
 ### 9.2 1.5B Experiment Records
 
-| # | Task | Method | Base Accuracy | Trained Accuracy | Change | Significant? | Report |
-|---|------|--------|---------------|------------------|--------|--------------|--------|
-| 1 | 3-digit addition | Full FT | 94.92% | 91.72% | -3.20% | YES (regression) | `experiment_report_3digit.md` |
-| 2 | 5-digit addition | Full FT | 83.04% | 81.76% | -1.28% | No | `experiment_report_overall.md` |
-| 3 | 6-digit addition | Full FT | 80.84% | 78.80% | -2.04% | No | `experiment_report_overall.md` |
-| 4 | 6-digit addition | LoRA | 80.84% | 82.84% | +2.00% | No (but positive) | `experiment_report_6digit_lora.md` |
-| **5** | **2-digit multiplication** | **LoRA** | **67.44%** | **73.80%** | **+6.36%** | **YES (improvement)** | `experiment_report_multiplication.md` |
+| # | Task | Method | Base Accuracy | Trained Accuracy | Observed change | Current status | Report |
+|---|------|--------|---------------|------------------|-----------------|----------------|--------|
+| 1 | 3-digit addition | Full FT | 94.92% | 91.72% | -3.20 pp | Legacy descriptive result | `experiment_report_3digit.md` |
+| 2 | 5-digit addition | Full FT | 83.04% | 81.76% | -1.28 pp | Legacy descriptive result | `experiment_report_overall.md` |
+| 3 | 6-digit addition | Full FT | 80.84% | 78.80% | -2.04 pp | Legacy descriptive result | `experiment_report_overall.md` |
+| 4 | 6-digit addition | LoRA | 80.84% | 82.84% | +2.00 pp | Descriptive, confounded comparison | `experiment_report_6digit_lora.md` |
+| **5** | **2-digit multiplication** | **LoRA** | **67.44%** | **73.80%** | **+6.36 pp** | **Preliminary legacy result with overlap** | `experiment_report_multiplication.md` |
 
-**Key result**: Qwen2.5-1.5B-Instruct + GRPO + LoRA, 2-digit multiplication, 500 steps, 3 minutes on RTX 4090: **67.44% → 73.80%** (statistically significant, 5/5 seeds improved).
+**Current interpretation**: the multiplication run shows a `67.44% → 73.80%` descriptive difference across five question-generation partitions of one checkpoint. Because operand pairs overlap training and no paired inference was saved, this is not a confirmed held-out or statistically significant result.
 
-**For the complete journey**: see `experiment_report_overall.md` — records the full evolution from failure to success.
+**For the complete exploratory history**: see `experiment_report_overall.md`; for the current evidence boundary, see `EVALUATION_STATUS.md`.
 
 ---
 
 
 ## Experiment figures: five GRPO training runs
 
-All six figures are generated from the saved repository JSON files. There is one saved training run per configuration. Five seeds generate evaluation question batches of 500 questions each, using greedy decoding. These are descriptive figures: individual-model Wilson intervals are not treated as paired improvement intervals, and no independent-training significance is reported. These figures do not revalidate significance statements in the historical reports.
+All six figures are generated from the saved repository JSON files. There is one saved training run per configuration. Five question-generation seeds produce evaluation batches of 500 rows each; they are not independent training runs. The Stage 4 protocols also contain train/evaluation operand-pair overlap, including a seed-42 partition generated in the same order as training. These are legacy descriptive figures, not held-out or independent-training inference.
 
 Training plots retain raw logs as thin lines and use a trailing 20-step mean as the thick line, starting at step 20. Spikes and failed experiments are retained.
 
@@ -602,7 +605,7 @@ Training plots retain raw logs as thin lines and use a trailing 20-step mean as 
 
 ![Five-experiment overview](docs/figures/grpo/01_results_overview.png)
 
-Connected markers show base and trained accuracy; the right panel reports percentage-point changes. The three full-FT configurations change by −3.20, −1.28 and −2.04 pp; 6-digit addition with LoRA changes by +2.00 pp, and 2-digit multiplication with LoRA by +6.36 pp. Tasks are separate experimental conditions, not a continuous learning trajectory.
+Connected markers show legacy base and trained accuracy; the right panel reports descriptive percentage-point differences. The multiplication `+6.36 pp` value comes from an evaluation protocol with known train/evaluation overlap and is not a held-out generalization estimate. Tasks are separate experimental conditions, not a continuous learning trajectory.
 
 [SVG](docs/figures/grpo/01_results_overview.svg) · [PDF](docs/figures/grpo/01_results_overview.pdf)
 
@@ -622,11 +625,11 @@ Each row retains all 500 logged frac_reward_zero_std values. Teal denotes 0 (wit
 
 [SVG](docs/figures/grpo/03_reward_signal.svg) · [PDF](docs/figures/grpo/03_reward_signal.pdf)
 
-### 4. Paired evaluation-batch results
+### 4. Legacy evaluation-partition differences
 
 ![Paired evaluation-batch results](docs/figures/grpo/04_evaluation_batches.png)
 
-Multiplication gains are +7.0, +7.0, +6.2, +6.4 and +5.2 pp across five generated question batches. Each row pairs base and trained results using the same question-generation seed. Improvement is observed in every batch, but these are not five independently trained models.
+The legacy multiplication differences are +7.0, +7.0, +6.2, +6.4 and +5.2 pp across five generated evaluation partitions. Each row pairs base and trained aggregate results by question-generation seed, but the protocol overlaps training (the seed-42 partition matches the training prefix 500/500). These are neither five independently trained models nor held-out generalization estimates.
 
 [SVG](docs/figures/grpo/04_evaluation_batches.svg) · [PDF](docs/figures/grpo/04_evaluation_batches.pdf)
 
@@ -663,7 +666,7 @@ illustrated-grpo/
 ├── README-cn.md                   # Main doc (Chinese)
 ├── experiment_report_3digit.md         # Exp 1: 3-digit addition full FT failure (-3.2%)
 ├── experiment_report_6digit_lora.md    # Exp 4: 6-digit addition LoRA first positive (+2.0%)
-├── experiment_report_multiplication.md # Exp 5: 2-digit multiplication LoRA success (+6.36%)
+├── experiment_report_multiplication.md # Exp 5: legacy multiplication observation (+6.36 pp)
 ├── experiment_report_overall.md        # Complete 5-experiment journey and conclusions
 ├── stage4_summary.md                   # Stage 1-4 training summary (parameters/results)
 ├── 4090_agent_上手指南.md          # 4090 server environment guide
@@ -711,4 +714,4 @@ illustrated-grpo/
 4. **Unfamiliar terms**: Refer back to section 0.3 terminology table
 5. **Unfamiliar formulas**: Refer back to section 4 for analogies and math knowledge mapping
 6. **Pass every understanding checkpoint**: Make sure you can answer those questions before moving on
-7. **For the complete training journey**: See `experiment_report_overall.md` — records the full evolution from -3.2% regression to +6.36% success. Also see `experiment_report_3digit.md`, `experiment_report_6digit_lora.md`, and `experiment_report_multiplication.md` for individual experiment deep-dives.
+7. **For the complete exploratory history**: See `experiment_report_overall.md` for the original experiment narrative and `EVALUATION_STATUS.md` for the current evidence boundary.

@@ -2,7 +2,7 @@
   "figures": [
     {
       "id": "01_results_overview",
-      "claim": "Observed mean accuracy changes across five configurations.",
+      "claim": "Legacy descriptive differences across five configurations; the evaluation protocol overlaps training.",
       "size_inches": [
         12.0,
         7.0
@@ -41,7 +41,7 @@
     },
     {
       "id": "04_evaluation_batches",
-      "claim": "All five saved multiplication evaluation batches show positive changes.",
+      "claim": "All five legacy multiplication evaluation partitions show positive descriptive differences; the protocol overlaps training.",
       "size_inches": [
         12.0,
         7.0
@@ -80,18 +80,18 @@
     }
   ],
   "sources": {
-    "eval_results_2digit_mul_lora_500.json": "77ab6275f25ce2d358da5d1c1debd420d4ff849c041a73a2ba48604b561d21b0",
-    "eval_results_500.json": "5c74beaeda355351c335d7b38227ea912f884b23eb0cc285f2844baf100e5a3e",
-    "eval_results_5digit_500.json": "00121f6bb5f89ba1884b3c92a5ec6d453f950436bb82aedd4412c7c4db5862b1",
-    "eval_results_6digit_500.json": "aa2b843648541441cc42e8c907f16b8bc59ba7e30d12a30447ef8696d0fc0d9c",
-    "eval_results_6digit_lora_500.json": "43a7dd62edaf14edfb895893dcfe6be71bfc8f87bab0fd881ca95f76bfb2e554",
-    "stage4b_trainer_state.json": "f93785d16fa61d84842661ff5072b19259f5feaf43717521ff64b6d531dbd8d2",
-    "stage4c_trainer_state.json": "a3117632746506a4bfa11b2de687eee049b110e1e6aeee147fee06c1e992bebd",
-    "stage4d_trainer_state.json": "74f919b87da298a48ae7d4660d6772e4f7b02693b2aba04b00fe25c68aba6a95",
-    "stage4e_trainer_state.json": "8598d5a50d7b766a412dccab484744abfb06210413b2e2fa0409e454c473ba6d",
-    "stage4_trainer_state.json": "67bbb2f911d794720f3ab487fe2091f7e49dd60f4dc19162acbdb0184b58034b"
+    "eval_results_2digit_mul_lora_500.json": "c0045556c5cafefd0466c609e6894e8ff4d2ac226250e60cda5f703ba1ad007f",
+    "eval_results_500.json": "1a09bffc637f4c1745127a77a6039433b0fddec7132ee57358ce797068692bba",
+    "eval_results_5digit_500.json": "d12432c522182abc120e12e27b37aab27d71d588db5503a22066115d9772583b",
+    "eval_results_6digit_500.json": "8d405f12e870108b66fc63c9baf636722308348546dee8b374277abc1986f231",
+    "eval_results_6digit_lora_500.json": "6f41c960bc5971f4006aa8ee98d5bef5b92ce87497c8299685389f6a6aa0be27",
+    "stage4_trainer_state.json": "369d70d04e90b22b5d1b5070b0e7ac34f4a02c4628a9f6690a2931503302da24",
+    "stage4b_trainer_state.json": "a0e79e7d49c8d57869b84466805e1a82b1f1086848289a82f209a653fdccfa08",
+    "stage4c_trainer_state.json": "28ef35ed1f1d98c5f9117bc3178380eac71d773d3ee6869b2b2266faee7c989f",
+    "stage4d_trainer_state.json": "a44c12134b4bb17746d43b872e18a29f51394ef9bdb8fcde09796672d8ebed4c",
+    "stage4e_trainer_state.json": "ae3752a9e221c1d1a69552a4c507d553a7b70224542029a9ec090f71df7e2ec4"
   },
-  "uncertainty": "Descriptive only; no training-replicate inference or paired question-level CI.",
+  "uncertainty": "Legacy descriptive results; train/evaluation operand pairs overlap, with no training-replicate inference or paired question-level CI.",
   "smoothing": "Trailing 20-step arithmetic mean; raw observations retained.",
   "missing_policy": "All 500 steps and all five evaluation batches retained.",
   "randomness": "No random sampling or jitter."

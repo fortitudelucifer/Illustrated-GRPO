@@ -1,11 +1,14 @@
 # Overall Experiment Report: GRPO Training on Qwen2.5-1.5B-Instruct
 
+> [!CAUTION]
+> **Legacy exploratory report.** A post-hoc audit found train/evaluation operand-pair overlap, no independent training replications, and no paired significance analysis. Numerical results below are retained as historical observations, not confirmed held-out effects. Full-FT/LoRA comparisons also changed several hyperparameters. See [Evaluation Status](EVALUATION_STATUS.md).
+
 > **Date**: 2026-08-06
 > **Model**: Qwen2.5-1.5B-Instruct (1.5B parameters)
 > **Hardware**: RTX 4090 (48GB), Docker (CUDA 12.4.1)
 > **Framework**: TRL 1.9.2, Transformers 5.14.1, PEFT, PyTorch 2.11.0
 > **Experiments**: 5 iterations, from failure to success
-> **Final Result**: **+6.36% statistically significant improvement** on 2-digit multiplication
+> **Original reported result (superseded)**: **+6.36% statistically significant improvement** on 2-digit multiplication; retained below as historical context only
 
 ---
 

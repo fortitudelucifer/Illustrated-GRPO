@@ -1,5 +1,8 @@
 # Stage 4 Evaluation Results
 
+> [!CAUTION]
+> **Legacy evaluation record.** The seed-42 partition follows the same generation sequence as training and is not held out. The five seeds are evaluation partitions for one checkpoint, not independent training runs. Separate marginal Wilson intervals were saved, but no per-question paired significance test was performed. See [`EVALUATION_STATUS.md`](../EVALUATION_STATUS.md).
+
 > 2026-08-06 | 4090 server | Qwen2.5-1.5B-Instruct + GRPO
 > **Revised evaluation: 500 questions × 5 seeds (replaces earlier n=20, single-seed evaluation)**
 
@@ -29,7 +32,7 @@ The revised evaluation uses 500 questions × 5 seeds = 2,500 total samples per m
 | Trained model | 91.72% ± 1.59% | [90.57%, 92.74%] | 2293/2500 |
 | **Change** | **-3.20%** | CIs do not overlap | -80/2500 |
 
-**Conclusion**: The trained model is **statificantly worse** than the base model on this task. The 95% confidence intervals do not overlap, confirming this is not due to random variation.
+**Current interpretation**: The trained checkpoint has lower descriptive accuracy under this legacy protocol. Marginal CI non-overlap is not a paired significance test, and the seed-42 partition is not held out; statistical significance is not claimed.
 
 ## Per-Seed Detail
 

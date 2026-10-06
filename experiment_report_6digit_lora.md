@@ -1,11 +1,14 @@
 # Experiment Report: LoRA GRPO on 6-Digit Addition with Qwen2.5-1.5B
 
+> [!CAUTION]
+> **Legacy exploratory report.** Training and one evaluation partition use seed 42 with the same generation order, so that partition is not held out. The five seeds below are evaluation partitions for one checkpoint. Full-FT and LoRA also changed learning rate, beta, warmup, temperature, and gradient clipping, so the comparison does not isolate a LoRA effect. See [Evaluation Status](EVALUATION_STATUS.md).
+
 > **Date**: 2026-08-06
 > **Model**: Qwen2.5-1.5B-Instruct
 > **Task**: 6-digit integer addition (a, b ∈ [100000, 999999])
 > **Hardware**: RTX 4090 (48GB), Docker (CUDA 12.4.1)
 > **Framework**: TRL 1.9.2, Transformers 5.14.1, PEFT, PyTorch 2.11.0
-> **Result**: **+2.00% improvement** (first positive result in 4 experiments)
+> **Original reported result**: **+2.00% descriptive difference** under the legacy protocol
 
 ---
 
