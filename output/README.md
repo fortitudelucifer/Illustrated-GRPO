@@ -1,5 +1,8 @@
 # output/ 目录说明
 
+> [!IMPORTANT]
+> 本目录保留原始训练与评估产物。阶段 4 的训练/评估题目存在重叠，五个评估 seed 也不是独立训练重复；因此 accuracy 与边际 Wilson CI 仅按历史描述性记录解释。原始 JSON、trainer state 和 event 文件保持不变。详见 [`EVALUATION_STATUS.md`](../EVALUATION_STATUS.md)。
+
 本目录保存 GRPO 训练过程中产生的记录文件，**不含模型权重**（已被 .gitignore 排除）。
 
 ## 目录结构

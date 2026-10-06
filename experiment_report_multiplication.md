@@ -1,11 +1,14 @@
 # Experiment Report: GRPO on Multiplication with Qwen2.5-1.5B
 
+> [!CAUTION]
+> **Legacy exploratory report.** A post-hoc audit reproduced train/evaluation overlap: 722/2,500 evaluation rows repeat ordered training pairs, 892/2,500 overlap modulo commutativity, and the seed-42 partition matches the training prefix 500/500. The observed `+6.36` percentage-point difference is not evidence of held-out generalization or statistical significance. The five seeds below are evaluation partitions for one checkpoint. See [Evaluation Status](EVALUATION_STATUS.md).
+
 > **Date**: 2026-08-06
 > **Model**: Qwen2.5-1.5B-Instruct
 > **Task**: Integer multiplication
 > **Hardware**: RTX 4090 (48GB), Docker (CUDA 12.4.1)
 > **Framework**: TRL 1.9.2, Transformers 5.14.1, PEFT, PyTorch 2.11.0
-> **Status**: **+6.36% statistically significant improvement** — best result across all 5 experiments
+> **Original reported status (superseded)**: **+6.36% statistically significant improvement** — retained below as historical context only
 
 ---
 
